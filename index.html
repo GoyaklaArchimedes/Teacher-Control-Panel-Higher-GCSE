@@ -6153,7 +6153,6 @@ function drawCircleTheoremAlternateSegment(angle){
 }
 
 function drawBearing(bearing, from, to){
-  // Adaptive layout: place 'from' point so the arrow + 'to' label fit in viewBox
   const W=300, H=260;
   const len=100;
   const rad=(bearing-90)*Math.PI/180;
@@ -6169,7 +6168,7 @@ function drawBearing(bearing, from, to){
 
   // Arc: from North (up = -90°) clockwise to bearing direction
   const arcR=32;
-  const arcStartRad=(-90)*Math.PI/180;  // North
+  const arcStartRad=(-90)*Math.PI/180;
   const arcEndRad=(bearing-90)*Math.PI/180;
   const arcX1=cx+arcR*Math.cos(arcStartRad), arcY1=cy+arcR*Math.sin(arcStartRad);
   const arcX2=cx+arcR*Math.cos(arcEndRad),   arcY2=cy+arcR*Math.sin(arcEndRad);
@@ -6180,9 +6179,17 @@ function drawBearing(bearing, from, to){
   const labDist=48;
   const labX=cx+labDist*Math.cos(bisRad), labY=cy+labDist*Math.sin(bisRad);
 
-  // 'to' label: offset away from 'from' point
-  const norm=Math.sqrt(dx*dx+dy*dy);
-  const toLabelX=ex+(dx/norm)*14, toLabelY=ey+(dy/norm)*14;
+  // Perpendicular-offset point labels so they never sit on the bearing line,
+  // regardless of which direction it points
+  const norm=Math.sqrt(dx*dx+dy*dy)||1;
+  const ux=dx/norm, uy=dy/norm;     // unit vector along the line
+  const px=-uy, py=ux;              // perpendicular unit vector
+
+  const perpOff=18, alongOff=14;
+  const fromLabelX = cx - ux*alongOff + px*perpOff;
+  const fromLabelY = cy - uy*alongOff + py*perpOff;
+  const toLabelX   = ex + ux*alongOff + px*perpOff;
+  const toLabelY   = ey + uy*alongOff + py*perpOff;
 
   return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
   <line x1="${cx.toFixed(1)}" y1="${northY.toFixed(1)}" x2="${cx.toFixed(1)}" y2="${(cy+20).toFixed(1)}" stroke="#888" stroke-width="1.5" stroke-dasharray="5,3"/>
@@ -6192,7 +6199,7 @@ function drawBearing(bearing, from, to){
   <polygon points="${ex.toFixed(1)},${ey.toFixed(1)} ${(ex-10*Math.cos(rad-0.35)).toFixed(1)},${(ey-10*Math.sin(rad-0.35)).toFixed(1)} ${(ex-10*Math.cos(rad+0.35)).toFixed(1)},${(ey-10*Math.sin(rad+0.35)).toFixed(1)}" fill="#c9963a"/>
   <circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="5" fill="#0d2b5e"/>
   <circle cx="${ex.toFixed(1)}" cy="${ey.toFixed(1)}" r="5" fill="#15803d"/>
-  <text x="${(cx-20).toFixed(1)}" y="${(cy+5).toFixed(1)}" font-size="14" fill="#0d2b5e" font-family="Georgia,serif" font-weight="bold">${from}</text>
+  <text x="${fromLabelX.toFixed(1)}" y="${fromLabelY.toFixed(1)}" font-size="14" fill="#0d2b5e" font-family="Georgia,serif" font-weight="bold" text-anchor="middle">${from}</text>
   <text x="${toLabelX.toFixed(1)}" y="${toLabelY.toFixed(1)}" font-size="14" fill="#15803d" font-family="Georgia,serif" font-weight="bold" text-anchor="middle">${to}</text>
   <text x="${labX.toFixed(1)}" y="${labY.toFixed(1)}" font-size="12" fill="#c9963a" font-family="Georgia,serif" font-weight="bold" text-anchor="middle" dominant-baseline="middle">${String(bearing).padStart(3,'0')}°</text>
 </svg>`;
@@ -8516,7 +8523,124 @@ function makeExtendedReversePercentage(){
   };
 }
 
+function makeLoci(){
+  const type = choice([
+    'equidistant_two_points',
+    'equidistant_two_lines',
+    'fixed_distance_point',
+    'fixed_distance_line',
+    'equidistant_two_lines_angle',
+    'identify_region'
+  ]);
+
+  if(type === 'equidistant_two_points'){
+    return {
+      topic:"Geometry & Measure", skill:"Loci and constructions", difficulty:"Intermediate",
+      paper:"paper1",
+      question:`Describe the locus of all points that are equidistant from two fixed points A and B.`,
+      options: shuffle([
+        "The perpendicular bisector of the line segment AB",
+        "A circle with centre A passing through B",
+        "A line parallel to AB",
+        "The angle bisector of angle A"
+      ]),
+      answer: "The perpendicular bisector of the line segment AB",
+      solution: `The set of all points equidistant from A and B forms the perpendicular bisector of AB.\n\nThis is a straight line that:\n• passes through the midpoint of AB\n• is at 90° to AB`,
+      type:"mcq", id:makeID("GEO")
+    };
+  }
+
+  if(type === 'equidistant_two_lines'){
+    return {
+      topic:"Geometry & Measure", skill:"Loci and constructions", difficulty:"Intermediate",
+      paper:"paper1",
+      question:`Two straight lines meet at a point.\nDescribe the locus of all points that are equidistant from both lines.`,
+      options: shuffle([
+        "The angle bisector of the angle between the two lines",
+        "The perpendicular bisector of the two lines",
+        "A circle centred at the point where the lines meet",
+        "A line parallel to both lines"
+      ]),
+      answer: "The angle bisector of the angle between the two lines",
+      solution: `The locus of points equidistant from two intersecting lines is the angle bisector.\n\nThere are actually two angle bisectors (one for each pair of vertically opposite angles), but the principal one bisects the acute angle between the lines.`,
+      type:"mcq", id:makeID("GEO")
+    };
+  }
+
+  if(type === 'fixed_distance_point'){
+    const d = choice([2, 3, 4, 5]);
+    return {
+      topic:"Geometry & Measure", skill:"Loci and constructions", difficulty:"Intermediate",
+      paper:"paper1",
+      question:`Describe the locus of all points that are exactly ${d} cm from a fixed point P.`,
+      options: shuffle([
+        `A circle with centre P and radius ${d} cm`,
+        `A straight line ${d} cm from P`,
+        `Two parallel lines, each ${d} cm from P`,
+        `A square with centre P and side ${d} cm`
+      ]),
+      answer: `A circle with centre P and radius ${d} cm`,
+      solution: `All points exactly ${d} cm from a fixed point P lie on a circle.\n\n• Centre: P\n• Radius: ${d} cm`,
+      type:"mcq", id:makeID("GEO")
+    };
+  }
+
+  if(type === 'fixed_distance_line'){
+    const d = choice([2, 3, 4]);
+    return {
+      topic:"Geometry & Measure", skill:"Loci and constructions", difficulty:"Intermediate",
+      paper:"paper1",
+      question:`Describe the locus of all points that are exactly ${d} cm from a straight line AB (considering the region on one side).`,
+      options: shuffle([
+        `A straight line parallel to AB at a distance of ${d} cm`,
+        `A circle of radius ${d} cm`,
+        `The perpendicular bisector of AB`,
+        `Two lines at 45° to AB`
+      ]),
+      answer: `A straight line parallel to AB at a distance of ${d} cm`,
+      solution: `The locus of points a fixed distance from a straight line is a pair of parallel lines — one on each side.\n\nFor one side only: a single straight line parallel to AB at ${d} cm.`,
+      type:"mcq", id:makeID("GEO")
+    };
+  }
+
+  if(type === 'equidistant_two_lines_angle'){
+    return {
+      topic:"Geometry & Measure", skill:"Loci and constructions", difficulty:"Intermediate",
+      paper:"paper1",
+      question:`Which construction is used to find all points equidistant from two intersecting lines?`,
+      options: shuffle([
+        "Angle bisector construction",
+        "Perpendicular bisector construction",
+        "Drawing a circle through both lines",
+        "Constructing a parallel line"
+      ]),
+      answer: "Angle bisector construction",
+      solution: `To find points equidistant from two lines, use the angle bisector construction:\n\n1. Open compasses to any radius\n2. Place on the vertex and mark arcs on both lines\n3. From each arc, draw equal arcs that cross\n4. Draw the line through the vertex and crossing point`,
+      type:"mcq", id:makeID("GEO")
+    };
+  }
+
+  // identify_region
+  const r = choice([3, 4, 5]);
+  return {
+    topic:"Geometry & Measure", skill:"Loci and constructions", difficulty:"Intermediate",
+    paper:"paper1",
+    question:`A point Q moves so that it is always less than ${r} cm from a fixed point P.\nWhich of these best describes the region where Q can be?`,
+    options: shuffle([
+      `The interior of a circle with centre P and radius ${r} cm`,
+      `The circumference of a circle with centre P and radius ${r} cm`,
+      `A square with centre P and side ${r} cm`,
+      `The exterior of a circle with centre P and radius ${r} cm`
+    ]),
+    answer: `The interior of a circle with centre P and radius ${r} cm`,
+    solution: `"Less than ${r} cm from P" means inside the boundary, not on it.\n\nThe region is the interior (inside) of a circle with:\n• Centre: P\n• Radius: ${r} cm\n\n(The boundary itself — the circle — is NOT included since the distance must be strictly less than ${r} cm.)`,
+    type:"mcq", id:makeID("GEO")
+  };
+}
+
 const FACTORY_REGISTRY = [
+
+  /* ── NUMBER ── */
   { topic:"Number", name:"Recognising Percentages", fn:makeRecognisePercentage, prefix:"RECP", inMap:true },
   { topic:"Number", name:"FDP Conversions", fn:makeFDPConversionRoundTrip, prefix:"FDP", inMap:true },
   { topic:"Number", name:"Percentage of an Amount (Mental)", fn:makePercentageOfAmountMental, prefix:"PCTA", inMap:true },
@@ -8555,6 +8679,20 @@ const FACTORY_REGISTRY = [
   { topic:"Number", name:"BIDMAS \u2014 Foundation", fn:makeBIDMASFoundation, prefix:"BID", inMap:true },
   { topic:"Number", name:"BIDMAS \u2014 Intermediate", fn:makeBIDMASIntermediate, prefix:"BID", inMap:true },
   { topic:"Number", name:"BIDMAS \u2014 Bracket Placement", fn:makeBIDMASBracketPlacement, prefix:"BID", inMap:true },
+  { topic:"Number", name:"Surds — Simplify", fn:makeSurdsSimplify, prefix:"SRD", inMap:true },
+  { topic:"Number", name:"Surds — Rationalise", fn:makeSurdsRationalise, prefix:"SRD", inMap:true },
+  { topic:"Number", name:"Surds — Expand", fn:makeSurdsExpandSimple, prefix:"SRD", inMap:true },
+  { topic:"Number", name:"Recurring Decimal (1 d.p.)", fn:makeRecurringDecimal1, prefix:"REC", inMap:true },
+  { topic:"Number", name:"Recurring Decimal (2 d.p.)", fn:makeRecurringDecimal2, prefix:"REC", inMap:true },
+  { topic:"Number", name:"Recurring Decimal — Mixed", fn:makeRecurringDecimalMixed, prefix:"REC", inMap:true },
+  { topic:"Number", name:"Standard Form — Add", fn:makeStandardFormAdd, prefix:"SF", inMap:true },
+  { topic:"Number", name:"Standard Form — Subtract", fn:makeStandardFormSubtract, prefix:"SF", inMap:true },
+  { topic:"Number", name:"Standard Form — Order", fn:makeStandardFormOrder, prefix:"SF", inMap:true },
+  { topic:"Number", name:"Indices — Fractional", fn:makeIndicesFractional, prefix:"IDX", inMap:true },
+  { topic:"Number", name:"Indices — Negative", fn:makeIndicesNegative, prefix:"IDX", inMap:true },
+  { topic:"Number", name:"Proof \u2014 Surds Irrational", fn:makeProofSurdsIrrational, prefix:"PRUF", inMap:true },
+
+  /* ── ALGEBRA ── */
   { topic:"Algebra", name:"Expand Single Bracket", fn:makeExpandSingleBracketQuestion, prefix:"ALG", inMap:true },
   { topic:"Algebra", name:"Expand Double Brackets", fn:makeExpandDoubleBracketQuestion, prefix:"ALG", inMap:true },
   { topic:"Algebra", name:"Factorise \u2014 Common Factor", fn:makeFactoriseCommonFactorQuestion, prefix:"ALG", inMap:true },
@@ -8578,6 +8716,21 @@ const FACTORY_REGISTRY = [
   { topic:"Algebra", name:"Sequence \u2014 nth Term", fn:makeSequenceNthTermQuestion, prefix:"ALG", inMap:true },
   { topic:"Algebra", name:"Sequence \u2014 Pattern", fn:makeSequencePatternQuestion, prefix:"ALG", inMap:true },
   { topic:"Algebra", name:"Trial and Improvement", fn:makeTrialImprovementQuestion, prefix:"ALG", inMap:true },
+  { topic:"Algebra", name:"Quadratic Formula", fn:makeQuadraticFormula, prefix:"ALG", inMap:true },
+  { topic:"Algebra", name:"Completing the Square", fn:makeCompletingTheSquare, prefix:"ALG", inMap:true },
+  { topic:"Algebra", name:"Factorise Quadratic", fn:makeFactoriseQuadratic, prefix:"ALG", inMap:true },
+  { topic:"Algebra", name:"Expand Triple Brackets", fn:makeExpandTripleBrackets, prefix:"ALG", inMap:true },
+  { topic:"Algebra", name:"Sequence — Quadratic nth Term", fn:makeSequenceNthTermQuadratic, prefix:"ALG", inMap:true },
+  { topic:"Algebra", name:"Geometric Sequence", fn:makeGeometricSequence, prefix:"ALG", inMap:true },
+  { topic:"Algebra", name:"Show That (Algebraic Proof)", fn:makeShowThatQuestion, prefix:"ALG", inMap:true },
+  { topic:"Algebra", name:"Iteration", fn:makeIteration, prefix:"ALG", inMap:true },
+  { topic:"Algebra", name:"Inverse Proportion", fn:makeInverseProportion, prefix:"ALG", inMap:true },
+  { topic:"Algebra", name:"Functions \u2014 Evaluate", fn:makeFunctionsEvaluate, prefix:"FN", inMap:true },
+  { topic:"Algebra", name:"Functions \u2014 Composite", fn:makeCompositeFunctions, prefix:"FN", inMap:true },
+  { topic:"Algebra", name:"Functions \u2014 Inverse", fn:makeInverseFunction, prefix:"FN", inMap:true },
+  { topic:"Algebra", name:"Simultaneous \u2014 One Quadratic", fn:makeSimultaneousOneQuadratic, prefix:"ALG", inMap:true },
+
+  /* ── GEOMETRY & MEASURE ── */
   { topic:"Geometry & Measure", name:"Rectangle \u2014 Area", fn:makeRectangleAreaQuestion, prefix:"GEO", inMap:true },
   { topic:"Geometry & Measure", name:"Rectangle \u2014 Perimeter", fn:makeRectanglePerimeterQuestion, prefix:"GEO", inMap:true },
   { topic:"Geometry & Measure", name:"Triangle \u2014 Area", fn:makeTriangleAreaQuestion, prefix:"GEO", inMap:true },
@@ -8603,6 +8756,33 @@ const FACTORY_REGISTRY = [
   { topic:"Geometry & Measure", name:"Trigonometry \u2014 TOA (tan)", fn:makeTrigTOAQuestion, prefix:"GEO", inMap:true },
   { topic:"Geometry & Measure", name:"Trigonometry \u2014 Find a Side", fn:makeTrigFindSideQuestion, prefix:"GEO", inMap:true },
   { topic:"Geometry & Measure", name:"Trigonometry \u2014 Find an Angle", fn:makeTrigFindAngleQuestion, prefix:"GEO", inMap:true },
+  { topic:"Geometry & Measure", name:"Vectors", fn:makeVectors, prefix:"VEC", inMap:true },
+  { topic:"Geometry & Measure", name:"Sine Rule", fn:makeSineRule, prefix:"GEO", inMap:true },
+  { topic:"Geometry & Measure", name:"Cosine Rule — Find Side", fn:makeCosineRule, prefix:"GEO", inMap:true },
+  { topic:"Geometry & Measure", name:"Cosine Rule — Find Angle", fn:makeCosineRuleAngle, prefix:"GEO", inMap:true },
+  { topic:"Geometry & Measure", name:"Arc Length", fn:makeArcLength, prefix:"GEO", inMap:true },
+  { topic:"Geometry & Measure", name:"Sector Area", fn:makeSectorArea, prefix:"GEO", inMap:true },
+  { topic:"Geometry & Measure", name:"Volume — Sphere", fn:makeSphereVolume, prefix:"GEO", inMap:true },
+  { topic:"Geometry & Measure", name:"Volume — Cone", fn:makeConeVolume, prefix:"GEO", inMap:true },
+  { topic:"Geometry & Measure", name:"3D Pythagoras", fn:make3DPythagoras, prefix:"GEO", inMap:true },
+  { topic:"Geometry & Measure", name:"Straight Line Equation", fn:makeStraightLineEquation, prefix:"GEO", inMap:true },
+  { topic:"Geometry & Measure", name:"Transformations", fn:makeTransformations, prefix:"GEO", inMap:true },
+  { topic:"Geometry & Measure", name:"Bearings", fn:makeBearings, prefix:"GEO", inMap:true },
+  { topic:"Geometry & Measure", name:"Loci and Constructions", fn:makeLoci, prefix:"GEO", inMap:true },
+  { topic:"Geometry & Measure", name:"Similarity", fn:makeSimilarity, prefix:"GEO", inMap:true },
+  { topic:"Geometry & Measure", name:"Scale Factor — Volume", fn:makeScaleFactorVolume, prefix:"GEO", inMap:true },
+  { topic:"Geometry & Measure", name:"Matrices", fn:makeMatrices, prefix:"MAT", inMap:true },
+
+  /* ── CIRCLE THEOREMS ── */
+  { topic:"Circle Theorems", name:"Angle at Centre = 2 × Circumference", fn:makeCircleTheoremAngleCenter, prefix:"CIR", inMap:true },
+  { topic:"Circle Theorems", name:"Angle in a Semicircle", fn:makeCircleTheoremSemicircle, prefix:"CIR", inMap:true },
+  { topic:"Circle Theorems", name:"Angles in Same Segment", fn:makeCircleTheoremSameSegment, prefix:"CIR", inMap:true },
+  { topic:"Circle Theorems", name:"Cyclic Quadrilateral", fn:makeCircleTheoremCyclic, prefix:"CIR", inMap:true },
+  { topic:"Circle Theorems", name:"Tangent ⊥ Radius", fn:makeCircleTheoremTangent, prefix:"CIR", inMap:true },
+  { topic:"Circle Theorems", name:"Tangents from External Point", fn:makeCircleTheoremTangentExternal, prefix:"CIR", inMap:true },
+  { topic:"Circle Theorems", name:"Alternate Segment Theorem", fn:makeCircleTheoremAlternateSegment, prefix:"CIR", inMap:true },
+
+  /* ── STATISTICS & PROBABILITY ── */
   { topic:"Statistics & Probability", name:"Mean \u2014 Integer Data", fn:makeMeanQuestionInteger, prefix:"STAT", inMap:true },
   { topic:"Statistics & Probability", name:"Mean \u2014 Missing Value", fn:makeMissingMeanQuestion, prefix:"STAT", inMap:true },
   { topic:"Statistics & Probability", name:"Median", fn:makeMedianQuestion, prefix:"STAT", inMap:true },
@@ -8619,52 +8799,6 @@ const FACTORY_REGISTRY = [
   { topic:"Statistics & Probability", name:"Relative Frequency", fn:makeRelativeFrequency, prefix:"PROB", inMap:true },
   { topic:"Statistics & Probability", name:"Pie Chart \u2014 Angle", fn:makePieChartAngle, prefix:"STAT", inMap:true },
   { topic:"Statistics & Probability", name:"Scatter Graph \u2014 Correlation", fn:makeScatterCorrelation, prefix:"STAT", inMap:true },
-  /* ── LAYER 2: Number ── */
-  { topic:"Number", name:"Surds — Simplify", fn:makeSurdsSimplify, prefix:"SRD", inMap:true },
-  { topic:"Number", name:"Surds — Rationalise", fn:makeSurdsRationalise, prefix:"SRD", inMap:true },
-  { topic:"Number", name:"Surds — Expand", fn:makeSurdsExpandSimple, prefix:"SRD", inMap:true },
-  { topic:"Number", name:"Recurring Decimal (1 d.p.)", fn:makeRecurringDecimal1, prefix:"REC", inMap:true },
-  { topic:"Number", name:"Recurring Decimal (2 d.p.)", fn:makeRecurringDecimal2, prefix:"REC", inMap:true },
-  { topic:"Number", name:"Recurring Decimal — Mixed", fn:makeRecurringDecimalMixed, prefix:"REC", inMap:true },
-  { topic:"Number", name:"Standard Form — Add", fn:makeStandardFormAdd, prefix:"SF", inMap:true },
-  { topic:"Number", name:"Standard Form — Subtract", fn:makeStandardFormSubtract, prefix:"SF", inMap:true },
-  { topic:"Number", name:"Standard Form — Order", fn:makeStandardFormOrder, prefix:"SF", inMap:true },
-  { topic:"Number", name:"Indices — Fractional", fn:makeIndicesFractional, prefix:"IDX", inMap:true },
-  { topic:"Number", name:"Indices — Negative", fn:makeIndicesNegative, prefix:"IDX", inMap:true },
-  /* ── LAYER 2: Algebra ── */
-  { topic:"Algebra", name:"Quadratic Formula", fn:makeQuadraticFormula, prefix:"ALG", inMap:true },
-  { topic:"Algebra", name:"Completing the Square", fn:makeCompletingTheSquare, prefix:"ALG", inMap:true },
-  { topic:"Algebra", name:"Factorise Quadratic", fn:makeFactoriseQuadratic, prefix:"ALG", inMap:true },
-  { topic:"Algebra", name:"Expand Triple Brackets", fn:makeExpandTripleBrackets, prefix:"ALG", inMap:true },
-  { topic:"Algebra", name:"Sequence — Quadratic nth Term", fn:makeSequenceNthTermQuadratic, prefix:"ALG", inMap:true },
-  { topic:"Algebra", name:"Geometric Sequence", fn:makeGeometricSequence, prefix:"ALG", inMap:true },
-  { topic:"Algebra", name:"Show That (Algebraic Proof)", fn:makeShowThatQuestion, prefix:"ALG", inMap:true },
-  { topic:"Algebra", name:"Iteration", fn:makeIteration, prefix:"ALG", inMap:true },
-  { topic:"Algebra", name:"Inverse Proportion", fn:makeInverseProportion, prefix:"ALG", inMap:true },
-  /* ── LAYER 2: Geometry & Measure ── */
-  { topic:"Geometry & Measure", name:"Vectors", fn:makeVectors, prefix:"VEC", inMap:true },
-  { topic:"Geometry & Measure", name:"Sine Rule", fn:makeSineRule, prefix:"GEO", inMap:true },
-  { topic:"Geometry & Measure", name:"Cosine Rule — Find Side", fn:makeCosineRule, prefix:"GEO", inMap:true },
-  { topic:"Geometry & Measure", name:"Cosine Rule — Find Angle", fn:makeCosineRuleAngle, prefix:"GEO", inMap:true },
-  { topic:"Geometry & Measure", name:"Arc Length", fn:makeArcLength, prefix:"GEO", inMap:true },
-  { topic:"Geometry & Measure", name:"Sector Area", fn:makeSectorArea, prefix:"GEO", inMap:true },
-  { topic:"Geometry & Measure", name:"Volume — Sphere", fn:makeSphereVolume, prefix:"GEO", inMap:true },
-  { topic:"Geometry & Measure", name:"Volume — Cone", fn:makeConeVolume, prefix:"GEO", inMap:true },
-  { topic:"Geometry & Measure", name:"3D Pythagoras", fn:make3DPythagoras, prefix:"GEO", inMap:true },
-  { topic:"Geometry & Measure", name:"Straight Line Equation", fn:makeStraightLineEquation, prefix:"GEO", inMap:true },
-  { topic:"Geometry & Measure", name:"Transformations", fn:makeTransformations, prefix:"GEO", inMap:true },
-  { topic:"Geometry & Measure", name:"Bearings", fn:makeBearings, prefix:"GEO", inMap:true },
-  { topic:"Geometry & Measure", name:"Similarity", fn:makeSimilarity, prefix:"GEO", inMap:true },
-  { topic:"Geometry & Measure", name:"Scale Factor — Volume", fn:makeScaleFactorVolume, prefix:"GEO", inMap:true },
-  /* ── LAYER 2: Circle Theorems ── */
-  { topic:"Circle Theorems", name:"Angle at Centre = 2 × Circumference", fn:makeCircleTheoremAngleCenter, prefix:"CIR", inMap:true },
-  { topic:"Circle Theorems", name:"Angle in a Semicircle", fn:makeCircleTheoremSemicircle, prefix:"CIR", inMap:true },
-  { topic:"Circle Theorems", name:"Angles in Same Segment", fn:makeCircleTheoremSameSegment, prefix:"CIR", inMap:true },
-  { topic:"Circle Theorems", name:"Cyclic Quadrilateral", fn:makeCircleTheoremCyclic, prefix:"CIR", inMap:true },
-  { topic:"Circle Theorems", name:"Tangent ⊥ Radius", fn:makeCircleTheoremTangent, prefix:"CIR", inMap:true },
-  { topic:"Circle Theorems", name:"Tangents from External Point", fn:makeCircleTheoremTangentExternal, prefix:"CIR", inMap:true },
-  { topic:"Circle Theorems", name:"Alternate Segment Theorem", fn:makeCircleTheoremAlternateSegment, prefix:"CIR", inMap:true },
-  /* ── LAYER 2: Statistics & Probability ── */
   { topic:"Statistics & Probability", name:"Histogram — Frequency Density", fn:makeHistogramFreqDensity, prefix:"STAT", inMap:true },
   { topic:"Statistics & Probability", name:"Histogram — Frequency from FD", fn:makeHistogramFreqFromFD, prefix:"STAT", inMap:true },
   { topic:"Statistics & Probability", name:"Cumulative Frequency — Median", fn:makeCumulativeFrequencyMedian, prefix:"STAT", inMap:true },
@@ -8673,13 +8807,6 @@ const FACTORY_REGISTRY = [
   { topic:"Statistics & Probability", name:"Venn — Two Sets (Count)", fn:makeVennTwoSetCount, prefix:"VENN", inMap:true },
   { topic:"Statistics & Probability", name:"Tree Diagram — Conditional", fn:makeTreeDiagramConditional, prefix:"PROB", inMap:true },
   { topic:"Statistics & Probability", name:"Frequency Polygon — Grouped Mean", fn:makeFrequencyPolygon, prefix:"STAT", inMap:true },
-  /* ── HIGHER-ONLY additions ── */
-  { topic:"Number", name:"Proof \u2014 Surds Irrational", fn:makeProofSurdsIrrational, prefix:"PRUF", inMap:true },
-  { topic:"Algebra", name:"Functions \u2014 Evaluate", fn:makeFunctionsEvaluate, prefix:"FN", inMap:true },
-  { topic:"Algebra", name:"Functions \u2014 Composite", fn:makeCompositeFunctions, prefix:"FN", inMap:true },
-  { topic:"Algebra", name:"Functions \u2014 Inverse", fn:makeInverseFunction, prefix:"FN", inMap:true },
-  { topic:"Algebra", name:"Simultaneous \u2014 One Quadratic", fn:makeSimultaneousOneQuadratic, prefix:"ALG", inMap:true },
-  { topic:"Geometry & Measure", name:"Matrices", fn:makeMatrices, prefix:"MAT", inMap:true },
 
 ];
 
@@ -8808,11 +8935,43 @@ function toggleSolution(){
 }
 function copyId(){
   if(!currentQ||!currentQ.id) return;
-  navigator.clipboard.writeText(currentQ.id).then(()=>{
-    const h=document.getElementById('copyHint');
+  const h=document.getElementById('copyHint');
+  const showCopied=()=>{
     h.textContent='copied!'; h.classList.add('copy-flash');
     setTimeout(()=>{h.textContent='click to copy'; h.classList.remove('copy-flash');},1500);
-  });
+  };
+  const showFailed=()=>{
+    h.textContent='copy failed'; h.classList.add('copy-flash');
+    setTimeout(()=>{h.textContent='click to copy'; h.classList.remove('copy-flash');},1500);
+  };
+  // Try the modern Clipboard API first (requires secure context / permissions)
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(currentQ.id).then(showCopied).catch(()=>{
+      fallbackCopy(currentQ.id, showCopied, showFailed);
+    });
+  } else {
+    fallbackCopy(currentQ.id, showCopied, showFailed);
+  }
+}
+
+function fallbackCopy(text, onSuccess, onFail){
+  // Fallback for sandboxed/non-HTTPS contexts where Clipboard API is blocked:
+  // create a temporary textarea, select its contents, and use execCommand.
+  try{
+    const ta=document.createElement('textarea');
+    ta.value=text;
+    ta.style.position='fixed';
+    ta.style.left='-9999px';
+    ta.style.top='0';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    const ok=document.execCommand('copy');
+    document.body.removeChild(ta);
+    if(ok) onSuccess(); else onFail();
+  }catch(e){
+    onFail();
+  }
 }
 function lookupByPrefix(){
   const raw=document.getElementById('idLookupInput').value.trim().toUpperCase();
